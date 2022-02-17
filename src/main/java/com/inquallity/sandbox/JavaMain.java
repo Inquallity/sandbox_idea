@@ -2,7 +2,6 @@ package com.inquallity.sandbox;
 
 import io.reactivex.Observable;
 import io.reactivex.schedulers.Schedulers;
-import io.reactivex.subjects.BehaviorSubject;
 
 public class JavaMain {
     public static String LEFT = "[L]";
@@ -13,7 +12,9 @@ public class JavaMain {
     }
 
     public void launch() {
-        System.out.println(printSteps(4));
+        System.out.println(
+                printSteps2(10)
+        );
     }
 
     public String printSteps(int howMuch) {
@@ -36,23 +37,31 @@ public class JavaMain {
     }
 
     public String printSteps2(int howMuch) {
-        final BehaviorSubject<String> valve = BehaviorSubject.create();
         final Observable<String> left = Observable.<String>create(emitter -> {
-            int iterations = howMuch;
-            while (iterations-- >= 0) {
-                emitter.onNext(JavaMain.LEFT);
-            }
-            emitter.onComplete();
-        }).subscribeOn(Schedulers.io());
+                    int iterations = howMuch;
+                    while (iterations-- > 0) {
+//                        System.out.println("Emit LEFT from " + Thread.currentThread().getName());
+                        emitter.onNext(JavaMain.LEFT);
+                    }
+                    emitter.onComplete();
+                })
+                .subscribeOn(Schedulers.computation());
         final Observable<String> right = Observable.<String>create(emitter -> {
-            int iterations = howMuch;
-            while (iterations-- >= 0) {
-                emitter.onNext(JavaMain.RIGHT);
-            }
-            emitter.onComplete();
-        }).subscribeOn(Schedulers.io());
-        valve.publish();
-        return "";
+                    int iterations = howMuch;
+                    while (iterations-- > 0) {
+//                        System.out.println("Emit RIGHT from " + Thread.currentThread().getName());
+                        emitter.onNext(JavaMain.RIGHT);
+                    }
+                    emitter.onComplete();
+                })
+                .subscribeOn(Schedulers.io());
+
+        final String result = left.zipWith(right, (l, r) -> l + r)
+                .collect(StringBuffer::new, StringBuffer::append)
+                .map(StringBuffer::toString)
+                .blockingGet();
+        System.out.println("result acquired " + result.length() + "; " + Thread.currentThread().getName());
+        return result;
     }
 }
 
